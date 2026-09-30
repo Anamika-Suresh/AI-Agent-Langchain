@@ -1,15 +1,3 @@
-"""
-Founder details extractor: Playwright + LangChain agent + LLM.
-Collects: name, role, bio, previous experience, LinkedIn URL, and the evidence sentence.
-
-Setup (PowerShell, venv active):
-    pip install playwright langchain langchain-groq pydantic
-    $env:GROQ_API_KEY="your key"        # set in the terminal, never in the file
-
-Run:
-    python AI_Agent.py
-    python AI_Agent.py https://some-other-site.com
-"""
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +12,7 @@ from pydantic import BaseModel, Field
 DEFAULT_URL = "https://globalwebproduction.com/"
 MODEL = "groq:openai/gpt-oss-120b"   # change this one line to use another LLM
 MAX_CHARS = 12000                    # limit text sent to the LLM (controls cost)
-HEADLESS = True                      # set False to watch the browser work
+HEADLESS = False                      # set False to watch the browser work
 
 
 class Founder(BaseModel):
