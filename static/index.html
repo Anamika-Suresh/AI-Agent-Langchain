@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Founder Extraction Platform</title>
+  <meta name="description" content="AI Agent web application for extracting company founders using LangChain, Playwright, FastAPI and PostgreSQL with real-time WebSockets.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Top Navbar Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-brain"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Founder Intelligence</h1>
+        <p>AI Agent Autonomous Data Extraction</p>
+      </div>
+    </div>
+
+    <!-- Nav Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('console')">
+        <i class="fa-solid fa-terminal"></i> Console
+      </button>
+      <button class="tab-btn" onclick="switchTab('directory')">
+        <i class="fa-solid fa-users"></i> Founders Directory
+      </button>
+      <button class="tab-btn" onclick="switchTab('history')">
+        <i class="fa-solid fa-clock-rotate-left"></i> Job History
+      </button>
+      <button class="tab-btn" onclick="switchTab('analytics')">
+        <i class="fa-solid fa-chart-pie"></i> Analytics
+      </button>
+    </nav>
+
+    <div class="db-badge">
+      <div class="db-dot"></div>
+      <span id="db-type-label">PostgreSQL</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Global Stats Bar -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon cyan">
+          <i class="fa-solid fa-building"></i>
+        </div>
+        <div class="stat-info">
+          <h3 id="stat-total-jobs">0</h3>
+          <p>Extracted Websites</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon emerald">
+          <i class="fa-solid fa-user-astronaut"></i>
+        </div>
+        <div class="stat-info">
+          <h3 id="stat-total-founders">0</h3>
+          <p>Founders Discovered</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-info">
+          <h3 id="stat-success-rate">0%</h3>
+          <p>Agent Success Rate</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon rose">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div class="stat-info">
+          <h3 id="stat-running-jobs">0</h3>
+          <p>Active Agent Runs</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: EXTRACTION CONSOLE -->
+    <section id="tab-console" class="view-section active">
+      <!-- Input Hero Banner -->
+      <div class="extraction-hero">
+        <h2 class="hero-title">Extract Company Founder Data</h2>
+        <p class="hero-subtitle">Enter any company URL. The AI Agent will launch a headless browser, navigate company pages, and extract verified founder bio, evidence, and LinkedIn links in real-time.</p>
+        
+        <form id="extract-form" onsubmit="handleExtractSubmit(event)">
+          <div class="url-input-group">
+            <div class="url-input-wrapper">
+              <i class="fa-solid fa-globe url-icon"></i>
+              <input type="text" id="target-url-input" class="url-input" placeholder="e.g. https://globalwebproduction.com/" required>
+            </div>
+            <button type="submit" id="extract-submit-btn" class="extract-btn">
+              <i class="fa-solid fa-robot"></i> Launch AI Agent
+            </button>
+          </div>
+        </form>
+
+        <div class="preset-links">
+          <span class="preset-label">Quick Presets:</span>
+          <button type="button" class="preset-chip" onclick="fillUrl('https://globalwebproduction.com/')">globalwebproduction.com</button>
+          <button type="button" class="preset-chip" onclick="fillUrl('https://stripe.com')">stripe.com</button>
+          <button type="button" class="preset-chip" onclick="fillUrl('https://openai.com')">openai.com</button>
+          <button type="button" class="preset-chip" onclick="fillUrl('https://anthropic.com')">anthropic.com</button>
+        </div>
+      </div>
+
+      <!-- Live Terminal + Results Split Grid -->
+      <div class="workspace-grid">
+        
+        <!-- Live Terminal Stream -->
+        <div class="console-card">
+          <div class="console-header">
+            <div class="console-title">
+              <div class="terminal-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <span id="console-status-text">Agent Terminal - Standby</span>
+            </div>
+            <div class="status-indicator">
+              <div id="status-pulse-dot" class="pulse-dot"></div>
+              <span id="job-status-label">READY</span>
+            </div>
+          </div>
+          <div id="console-logs" class="console-body">
+            <div class="log-entry">
+              <span class="log-time">00:00:00</span>
+              <span class="log-tag INFO">SYSTEM</span>
+              <span class="log-msg">AI Founder Extraction system initialized. Enter a URL to begin real-time extraction...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Founder Cards Viewer -->
+        <div class="results-card">
+          <div class="results-header">
+            <h3>Discovered Founders (<span id="live-founders-count">0</span>)</h3>
+            <div id="live-export-btns" style="display: none; gap: 0.5rem;">
+              <button class="action-btn" onclick="exportCurrentJob('json')"><i class="fa-solid fa-download"></i> JSON</button>
+              <button class="action-btn" onclick="exportCurrentJob('csv')"><i class="fa-solid fa-file-csv"></i> CSV</button>
+            </div>
+          </div>
+          <div id="live-founders-container" class="results-body">
+            <div class="empty-state">
+              <i class="fa-solid fa-user-gear empty-icon"></i>
+              <p>No founders extracted yet.</p>
+              <span style="font-size: 0.8rem; max-width: 250px;">Launch the AI agent to watch founders stream live into this panel.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: FOUNDERS DIRECTORY -->
+    <section id="tab-directory" class="view-section">
+      <div class="section-header-row">
+        <div>
+          <h2 style="font-family: 'Outfit'; font-size: 1.5rem;">Founders Database</h2>
+          <p style="color: var(--text-secondary); font-size: 0.88rem;">All company founders extracted across PostgreSQL records</p>
+        </div>
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="directory-search-input" class="search-input" placeholder="Search by name, role, or keyword..." oninput="handleDirectorySearch()">
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Founder Name</th>
+              <th>Role / Title</th>
+              <th>LinkedIn</th>
+              <th>Bio Summary</th>
+              <th>Source / Evidence</th>
+              <th>Extracted At</th>
+            </tr>
+          </thead>
+          <tbody id="founders-table-body">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 3: JOB HISTORY -->
+    <section id="tab-history" class="view-section">
+      <div class="section-header-row">
+        <div>
+          <h2 style="font-family: 'Outfit'; font-size: 1.5rem;">Extraction History</h2>
+          <p style="color: var(--text-secondary); font-size: 0.88rem;">Past autonomous browser agent extraction sessions</p>
+        </div>
+        <button class="action-btn" onclick="loadJobHistory()"><i class="fa-solid fa-rotate-right"></i> Refresh Jobs</button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Job ID</th>
+              <th>Target URL</th>
+              <th>Status</th>
+              <th>Founders Extracted</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 4: ANALYTICS -->
+    <section id="tab-analytics" class="view-section">
+      <div style="background: var(--bg-card); padding: 2rem; border-radius: 18px; border: 1px solid var(--border-color);">
+        <h2 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">System Overview & Database Diagnostics</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">PostgreSQL / SQLAlchemy backend status and agent metrics</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+          <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">DATABASE ENGINE</div>
+            <div id="diag-db-engine" style="font-size: 1.25rem; font-weight: 700; color: var(--cyan-accent); margin-top: 0.4rem;">PostgreSQL</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">FASTAPI BACKEND</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: var(--emerald-accent); margin-top: 0.4rem;">Active (v1.0.0)</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">WEBSOCKET CONNECTIONS</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: var(--purple-accent); margin-top: 0.4rem;">Active (Real-time)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Job Details Modal -->
+  <div id="job-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-job-title" style="font-family: 'Outfit'; font-size: 1.2rem;">Extraction Job Details</h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modal-job-body" class="modal-body">
+        <!-- Dynamic job details -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
